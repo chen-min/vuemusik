@@ -6,18 +6,17 @@
           <slider>
             <div v-for="item in recommends">
               <a :href="item.linkUrl">
-                <img class="needsclick" @load="loadImage" :src="item.picUrl">
+                <img class="needsclick" @load="loadImg" :src="item.picUrl">
               </a>
             </div>
           </slider>
         </div>
-
         <div class="recommend-list">
           <h1 class="list-title">热门歌单推荐</h1>
           <ul>
-            <li v-for="item in discList" class="item">
+            <li @click="selectItem(item)" v-for="item in discList" :key="item.dissid" class="item">
               <div class="icon">
-                <img width="60" height="60" v-lazy="item.imgurl">
+                <img v-lazy="item.imgurl" @load="loadImg" width="60" height="60">
               </div>
               <div class="text">
                 <h2 class="name" v-html="item.creator.name"></h2>
@@ -26,6 +25,7 @@
             </li>
           </ul>
         </div>
+
       </div>
       <div class="loading-container" v-show="!discList.length">
         <loading></loading>
@@ -71,12 +71,19 @@
           }
         })
       },
-      loadImage() {
-        if (!this.checkloaded) {
-          this.checkloaded = true
+      loadImg () {
+        if (!this.checkLoaded) {
           this.$refs.scroll.refresh()
+          this.checkLoaded = false
         }
       },
+      selectItem (item) {
+        this.$router.push({
+          path: `/recommend/${item.dissid}`
+        })
+        // this.setDisc(item)
+      },
+
 
     },
     components: {
