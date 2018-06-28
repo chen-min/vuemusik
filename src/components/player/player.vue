@@ -1,6 +1,12 @@
 <template>
   <div class="player" v-show="playlist.length > 0">
-    <transition>
+    <transition
+      name="normal"
+      @enter="enter"
+      @after-enter="afterEnter"
+      @leave="leave"
+      @afterLeave="afterLeave"
+    >
       <div class="normal-player" v-show="fullScreen">
         <div class="background">
           <img width="100%" height="100%" :src="currentSong.image" >
@@ -68,7 +74,7 @@
       </div>
     </transition>
      
-    <transition>
+    <transition name-"mini">
       <div class="mini-player" v-show="!fullScreen" @click="open">
         <div class="icon">
           <img width="40" height="40" :src="currentSong.image" :class="cdCls">
@@ -85,15 +91,24 @@
         </div>
       </div>
     </transition>
+    <audio 
+      ref="audio"
+      :src="currentSong.url"
+      >
+    </audio>
   </div>
 </template>
 
 <script>
 import {mapGetters, mapMutations} from 'vuex'
+import animations from 'create-keyframe-animation'
 import Scroll from 'base/scroll/scroll'
+import { prefixStyle } from 'common/js/dom'
 import { playMode } from 'common/js/config'
+const transform = prefixStyle('transform')
+
+
 export default {
-  
   components: {
 
   },
@@ -137,7 +152,17 @@ export default {
         'currentSong'
     ]),
   },
-
+  watch: {
+      currentSong (newSong, oldSong) {
+        if (newSong.id === oldSong.id) {
+          retrun
+        }
+        setTimeout(() => {
+          this.$refs.audio.play()
+        }, 1000)
+        console.log('watchcurrentsong')
+      }
+  },
   methods: {
     back () {
       this.setFullScreen(false)
@@ -157,6 +182,66 @@ export default {
     format() {
 
     },
+    enter (el, done) {
+      const { x, y, scale } = this._getPosAndScale()
+
+      let animation = {
+        0: {
+          transform: `translate3d(${x}px, ${y}px, 0) scale(${scale})`
+        },
+        60: {
+          transform: `translate3d(0, 0, 0) scale(1.1)`
+        },
+        100: {
+          transform: `translate3d(0, 0, 0) scale(1)`
+        }
+      }
+
+      animations.registerAnimation({
+        name: 'move',
+        animation,
+        presets: {
+          duration: 400,
+          easing: 'linear'
+        }
+      })
+
+      animations.runAnimation(this.$refs.cdWrapper, 'move', done)
+    },
+    afterEnter () {
+      animations.unregisterAnimation('move')
+      this.$refs.cdWrapper.style.animation = ''
+    },
+    leave (el, done) {
+      this.$refs.cdWrapper.style.transition = 'all 0.4s'
+      const { x, y, scale } = this._getPosAndScale()
+      this.$refs.cdWrapper.style[transform] = `translate3d(${x}px, ${y}px, 0) scale(${scale})`
+      this.$refs.cdWrapper.addEventListener('transitionend', done)
+    },
+    afterLeave () {
+      this.$refs.cdWrapper.style.transition = ''
+      this.$refs.cdWrapper.style[transform] = ''
+    },
+    _getPosAndScale () {
+      const miniWidth = 40
+      const miniX = miniWidth / 2 + 20
+      const miniY = window.innerHeight - miniWidth / 2 - 10
+      const normalWidth = window.innerWidth / 2
+      const normalX = normalWidth
+      const normalY = normalWidth * 0.8 / 2 + 80
+      // 以上坐标以屏幕左上角为原点计算
+
+      const scale = miniWidth / normalWidth
+      const x = -(normalX - miniX) // cdWrapper是最终的状态， 其位置相当于原点， 所以是负的
+      const y = miniY - normalY
+
+      return {
+        scale,
+        x,
+        y
+      }
+    },
+
     ...mapMutations({
       setFullScreen: 'SET_FULLSCREEN',
     })
