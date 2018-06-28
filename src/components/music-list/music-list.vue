@@ -25,7 +25,7 @@
       @scroll="scroll"
     >
       <div class="song-list-wrapper">
-        <song-list :songs="songs" @select="selectItem" :rank="rank"></song-list>
+        <song-list @select='selectItem' :songs="songs" :rank="rank"></song-list>
       </div>
       <div class="loading-wrapper">
         <loading v-show="!songs.length"></loading>
@@ -132,17 +132,17 @@ export default {
       this.$refs.list.$el.style.bottom = bottom
       this.$refs.list.refresh()
     },
+    selectItem(item, index) {
+      this.selectPlay({
+        list: this.songs,
+        index: index
+      })
+    },
     scroll (pos) {
       this.scrollY = pos.y
     },
     back () {
       this.$router.back()
-    },
-    selectItem (item, index) {
-      this.selectPlay({
-        list: this.songs,
-        index: index
-      })
     },
     random () {
       this.randomPlay({
