@@ -47,9 +47,10 @@
             <span class="dot" :class="{active: currentShow == 'lyric'}"></span>
           </div>
           <div class="progress-wrapper">
-            <span class="time time-l"> {{format(currentTime)}} </span>
+            <span class="time time-l"> {{format(currentTime)}} </span>s
             <div class="progress-bar-wrapper">
-              
+              <progress-bar>
+              </progress-bar>
             </div>
             <span class="time time-r"> {{ format(currentSong.duration) }} </span>
           </div>
@@ -58,13 +59,13 @@
               <i :class="modeIcon"></i>
             </div>
             <div class="icon icon-left" :class='disableCls'>
-              <i class="icon-prev"></i>
+              <i class="icon-prev" @click="prev"></i>
             </div>
             <div class="icon icon-center" :class='disableCls'>
-              <i :class="playIcon"></i>
+              <i :class="playIcon" @click="togglePlaying"></i>
             </div>
             <div class="icon icon-right" :class='disableCls'>
-              <i class="icon-next"></i>
+              <i class="icon-next" @click="next"></i>
             </div>
             <div class="icon icon-right">
               <i class="icon icon-not-favorite"></i>
@@ -94,6 +95,8 @@
     <audio 
       ref="audio"
       :src="currentSong.url"
+      @canplay="ready"
+      @timeupdate="updateTime"
       >
     </audio>
   </div>
@@ -106,11 +109,12 @@ import Scroll from 'base/scroll/scroll'
 import { prefixStyle } from 'common/js/dom'
 import { playMode } from 'common/js/config'
 const transform = prefixStyle('transform')
+import ProgressBar from 'base/progress-bar/progress-bar'
 
 
 export default {
   components: {
-
+    ProgressBar,
   },
   data() {
     return {
@@ -147,9 +151,13 @@ export default {
       return this.currentTime / this.currentSong.duration
     },
     ...mapGetters([
-        'playlist',
         'fullScreen',
-        'currentSong'
+        'playlist',
+        'currentSong',
+        'playing',
+        'currentIndex',
+        'mode',
+        'sequenceList'
     ]),
   },
   watch: {
@@ -160,7 +168,12 @@ export default {
         setTimeout(() => {
           this.$refs.audio.play()
         }, 1000)
-        console.log('watchcurrentsong')
+      },
+      playing (newPlaying) {
+        const audio = this.$refs.audio
+        this.$nextTick(() => {
+          newPlaying ? audio.play() : audio.pause()
+        })
       }
   },
   methods: {
@@ -176,11 +189,65 @@ export default {
     error () {
       this.songReady = true
     },
+    togglePlaying () {
+      if (!this.songReady) {
+        return 
+      }
+      console.log("togglepLAYING")
+      this.setPlayingState (!this.playing)
+    },
+    prev () {
+      if (!this.songReady) {
+        return 
+      }
+      let index = this.currentIndex - 1
+      if (index === -1) {
+        index = this.playlist.length-1
+      }
+      this.setCurrentIndex(index)
+      if (!this.playing) {
+        this.togglePlaying()
+      }
+    },
+    next () {
+      if (!this.songReady) {
+        return 
+      }
+      let index = this.currentIndex +1
+      if (index === this.playlist.length) {
+        index = 0 
+      }
+      this.setCurrentIndex(index)
+      if (!this.playing) {
+        this.togglePlaying()
+      }
+      this.songReady = false
+    },
+    updateTime(e) {
+      this.currentTime = e.target.currentTime
+    },
 
     ...mapMutations({
+      setFullScreen : 'SET_FULLSCREEN',
+      setPlayingState: 'SET_PLAYING_STATE',
+      setCurrentIndex: 'SET_CURRENT_INDEX',
+      setPlayMode: 'SET_PLAY_MODE',
+      setPlaylist: 'SET_PLAYlIST'
     }),
-    format() {
+    format(interval) {
+      interval = interval | 0 ;
+      const minute = interval /60  | 0 
+      const second = interval %60
+      return `${minute}::${this._pad(second)}`
 
+    },
+    _pad (num, n=2) {
+      let len = num.toString().length
+      while(len < 2) {
+        num = '0' + num
+        len ++
+      }
+      return num
     },
     enter (el, done) {
       const { x, y, scale } = this._getPosAndScale()
